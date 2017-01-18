@@ -1,0 +1,17 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import smtplib
+
+sender = 'localhost'
+receivers = ['3037184216@mms.att.net']
+
+message = """This is a test e-mail message.
+"""
+
+try:
+   smtpObj = smtplib.SMTP('localhost')
+   smtpObj.sendmail(sender, receivers, message)
+   print "Successfully sent email"
+except SMTPException:
+   print "Error: unable to send email"

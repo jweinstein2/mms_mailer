@@ -1,0 +1,87 @@
+#!/usr/bin/python
+
+import urllib2
+from HTMLParser import HTMLParser
+import random
+import string
+import os
+import smtplib
+import filecmp
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+
+subreddit = "emmawatson"
+img_urls = [] #list of images in subreddit
+
+class MyHTMLParser(HTMLParser):
+	# adds all images in list to global var
+    def handle_starttag(self, tag, attrs):
+    	if tag == 'a':
+       		if attrs[0][1] == 'image-list-link':
+       			url = attrs[1][1]
+       			#url = 'http://imgur.com/r/gone/sU9TL'   # send a missing image
+       			img_id = url.split('/')[-1]
+       			img_url = 'http://i.imgur.com/' + img_id + '.png'
+       			img_urls.append(img_url)
+
+# sends the message with given image attachment
+def SendMail(To, From, Subject, Text, ImgFileName):
+	print 'sending txt to ' + To
+	providers = ['@mms.att.net', '@vzwpix.com']
+	to_list = [To + s for s in providers]
+
+	# generate valid to addresses
+	for email in to_list:
+	    img_data = open(ImgFileName, 'rb').read()
+	    msg = MIMEMultipart()
+	    msg['Subject'] = Subject
+	    msg['From'] = From
+	    msg['To'] = email
+	    #msg['To'] = '3035798796@vzwpix.com'    # allison's number
+	    #msg['To'] = 'dennis.duan@yale.edu'
+
+	    text = MIMEText(Text)
+	    msg.attach(text)
+	    image = MIMEImage(img_data, name=os.path.basename(ImgFileName))
+	    msg.attach(image)
+
+	    s = smtplib.SMTP('localhost')
+
+	    s.sendmail(From, email, msg.as_string())
+	    s.quit()
+
+# ================ MAIN ===================
+
+# 1. Download Image List
+parser = MyHTMLParser()
+
+source_url = "http://imgur.com/r/" + subreddit + "/"
+response = urllib2.urlopen(source_url)
+html = response.read()
+parser.feed(html) # fills in image_url list
+
+while True:
+	# Randomly select image from list
+	image_url = random.choice(img_urls)
+
+	# Download the image at url
+	print 'downloading image : ' + image_url
+	resource = urllib2.urlopen(image_url)
+	img_file = open("pic.png","wb")
+	img_file.write(resource.read())
+	img_file.close()
+
+	# Check if image is invalid
+	#h1 = open('invalid.png', 'wb').read()
+	#h2 = open('pic.png', 'wb').read()
+	
+	#rms = math.sqrt(reduce(operator.add, map(lambda a,b: (a-b)**2, h1, h2))/len(h1))
+	if filecmp.cmp('invalid.png', 'pic.png') == True:
+		print 'invalid image rolling again'
+		continue
+
+	# 2: Send image
+	random_from = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5)) + '@gmail.com'
+	SendMail('3037184216', random_from, 'Daily Digest', '', 'pic.png')
+	break
