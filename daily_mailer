@@ -6,7 +6,7 @@ import random
 import string
 import os
 import smtplib
-import filecmp
+import filecmp, tempfile
 import sys
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -20,7 +20,6 @@ number = '3037184216'
 
 
 class MyHTMLParser(HTMLParser):
-
 	# adds all images in list to global var
 	def handle_starttag(self, tag, attrs):
 		if tag == 'a':
@@ -34,7 +33,13 @@ class MyHTMLParser(HTMLParser):
 
 # sends the message with given image attachment
 def SendMail(To, From, Subject, Text, ImgFileName):
-	providers = ['@mms.att.net', '@vzwpix.com']
+	providers = [
+		'@mms.att.net',			# at&t
+		'@vzwpix.com',    		# verizon
+		'@tmomail.net', 		# tmobile *UNTESTED*
+		'@pm.sprint.com'		# sprint  *UNTESTED*
+	]
+
 	to_list = [To + s for s in providers]
 
 	# generate valid to addresses
@@ -44,8 +49,6 @@ def SendMail(To, From, Subject, Text, ImgFileName):
 		msg['Subject'] = Subject
 		msg['From'] = From
 		msg['To'] = email
-		#msg['To'] = '3035798796@vzwpix.com'    # allison's number
-		#msg['To'] = 'dennis.duan@yale.edu'
 
 		text = MIMEText(Text)
 		msg.attach(text)
@@ -65,6 +68,7 @@ def SendMail(To, From, Subject, Text, ImgFileName):
 			print 'failed to send'
 			return False
 		s.quit()
+
 	print 'mail sent'
 	return True
 
@@ -72,7 +76,8 @@ def SendMail(To, From, Subject, Text, ImgFileName):
 # ================ MAIN ===================
 # 1. Download Image List
 parser = MyHTMLParser()
-cwd = sys.path[0]
+tmp_dir = sys.path[0] + '/tmp'
+pic_file = tempfile.NamedTemporaryFile(prefix='tmp', dir= tmp_dir)
 
 img_urls = [] #list of images in subreddit
 source_url = "http://imgur.com/r/" + subreddit + "/"
@@ -88,13 +93,11 @@ for _ in range(1,20):
 	# Download the image at url
 	print 'downloading image : ' + image_url
 	resource = urllib2.urlopen(image_url)
-	img_file = open(cwd + "/pic.png","wb")
-	img_file.write(resource.read())
-	img_file.close()
+	pic_file.write(resource.read())
+	pic_file.flush()
 
-	#rms = math.sqrt(reduce(operator.add, map(lambda a,b: (a-b)**2, h1, h2))/len(h1))
 	# Compare file to imgur's default missing image
-	if filecmp.cmp(cwd + '/invalid.png', cwd + '/pic.png') == True:
+	if filecmp.cmp(sys.path[0] + '/invalid.png', pic_file.name) == True:
 		print 'invalid image rolling again'
 		continue
 
@@ -103,8 +106,8 @@ for _ in range(1,20):
 		sender = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5)) + '@gmail.com'
 	else:
 		sender = subreddit + '_mailer@gmail.com'
-	if SendMail(number, sender, 'Daily Digest', '', cwd + '/pic.png'):
+	if SendMail(number, sender, 'Daily Digest', '', pic_file.name):
 		print 'sent succesfully to ' + number
 		break #break if sucessful
 	continue
-os.remove(cwd + '/pic.png')
+#os.remove(cwd + '/pic.png')

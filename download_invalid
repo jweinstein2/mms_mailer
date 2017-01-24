@@ -1,0 +1,12 @@
+#!/usr/bin/python
+
+import urllib2
+
+image_url = 'http://i.imgur.com/removed.png'
+print 'downloading image : ' + image_url
+
+# Download the image at url
+resource = urllib2.urlopen(image_url)
+img_file = open("invalid.png","wb")
+img_file.write(resource.read())
+img_file.close()
