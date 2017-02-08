@@ -150,20 +150,8 @@
 					// Disable submit.
 						$submit.disabled = true;
 
-					// // Call the python script (http://stackoverflow.com/questions/32288722/call-python-function-from-js)
-					// function runPyScript(){
-					// 	var jqXHR = $.ajax({
-					//		type: "POST",
-					// 		url: "/src/daily_mailer",
-					// 		async: false,
-					// 		data: { param: input }
-					// 	});
-					// 	return jqXHR.responseText;
-					// }
-
-					// do something with the response
-					response= runPyScript('data to process');
-					console.log(response);
+					// Call the python script
+					
 
 					// Process form.
 					// Note: Doesn't actually do anything yet (other than report back with a "thank you"),
