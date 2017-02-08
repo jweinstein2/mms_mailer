@@ -150,6 +150,23 @@
 					// Disable submit.
 						$submit.disabled = true;
 
+					// Run Python Script
+					function postData(input) {
+	    				$.ajax({
+									type: "POST",
+									url: "/reverse_pca.py",
+									data: { param: input },
+									success: callbackFunc
+							});
+					}
+
+					function callbackFunc(response) {
+					    // do something with the response
+					    console.log(response);
+					}
+
+					// postData('data to process');
+
 					// Process form.
 					// Note: Doesn't actually do anything yet (other than report back with a "thank you"),
 					// but there's enough here to piece together a working AJAX submission call that does.
@@ -165,7 +182,7 @@
 								$message._show('success', '#titsonrice!');
 								//$message._show('failure', 'Something went wrong. Please try again.');
 
-						}, 10);
+						}, 750);
 
 				});
 
