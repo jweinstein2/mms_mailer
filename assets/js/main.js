@@ -165,7 +165,7 @@
 								$message._show('success', '#titsonrice!');
 								//$message._show('failure', 'Something went wrong. Please try again.');
 
-						}, 3000);
+						}, 10);
 
 				});
 
