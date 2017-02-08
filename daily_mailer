@@ -4,20 +4,67 @@ import urllib2
 from HTMLParser import HTMLParser
 import random
 import string
-import os
+import os, sys
 import smtplib
 import filecmp, tempfile
-import sys
+import argparse
+import time #testing
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 
 
-# Customizable Globals
-randomize_from = False		# harder to block if turned on
-subreddit = "pics"
-number = '3037184216'
 
+# Customizable Globals
+# Changing these will override any command line arguments
+randomize_from = False		# harder to block if turned on
+verbose = False
+subreddit = ''
+number = ''
+subject = ''
+text = ''
+sender = ''					# used only if randomized_from is off
+pic_file = None
+
+# Parse inputs
+parser = argparse.ArgumentParser()
+parser.add_argument("number", type=int, help="recepient phone number")
+parser.add_argument("-t", help="bolded title line")
+parser.add_argument("-m", help="text message")
+parser.add_argument("-s", help="subreddit")
+parser.add_argument("-p", help="attached picture file")
+parser.add_argument("-f", help="specify sending address")
+parser.add_argument("-r", help="uses a randomized from address to prevent easy blocking", action='store_true')
+parser.add_argument("-v", "--verbose", help="increase output verbosity",  action="store_true")
+args = parser.parse_args()
+
+# change globals if empty
+if args.r:
+	randomized_from = True
+if args.verbose:
+	verbose = True
+if args.s and subreddit == '':
+	subreddit = args.s
+if args.p and pic_file == None:
+	pic_file = args.p
+if args.number and number == '':
+	number = str(args.number)
+if args.t and subject == '':
+	subject = args.t
+if args.m and text == '':
+	text = args.m
+
+#sys.exit() #stop here for testing purposes
+
+if verbose:
+    def verboseprint(*args):
+        # Print each argument separately so caller doesn't need to
+        # stuff everything to be printed into a single string
+        for arg in args:
+           print arg,
+        print
+else:
+    verboseprint = lambda *a: None      # do-nothing function
 
 class MyHTMLParser(HTMLParser):
 	# adds all images in list to global var
@@ -44,7 +91,6 @@ def SendMail(To, From, Subject, Text, ImgFileName):
 
 	# generate valid to addresses
 	for email in to_list:
-		img_data = open(ImgFileName, 'rb').read()
 		msg = MIMEMultipart()
 		msg['Subject'] = Subject
 		msg['From'] = From
@@ -52,13 +98,16 @@ def SendMail(To, From, Subject, Text, ImgFileName):
 
 		text = MIMEText(Text)
 		msg.attach(text)
-		try:
-			image = MIMEImage(img_data, name=os.path.basename(ImgFileName))
-		except TypeError:
-			print 'image type not recognized'
-			return False
 
-		msg.attach(image)
+		# Attach a picture if necessary
+		if ImgFileName != None:
+			img_data = open(ImgFileName, 'rb').read()
+			try:
+				image = MIMEImage(img_data, name=os.path.basename(ImgFileName))
+			except TypeError:
+				print 'image type not recognized'
+				return False
+			msg.attach(image)
 
 		s = smtplib.SMTP('localhost')
 
@@ -69,45 +118,46 @@ def SendMail(To, From, Subject, Text, ImgFileName):
 			return False
 		s.quit()
 
-	print 'mail sent'
+
 	return True
 
 
 # ================ MAIN ===================
 # 1. Download Image List
-parser = MyHTMLParser()
-tmp_dir = sys.path[0] + '/tmp'
-pic_file = tempfile.NamedTemporaryFile(prefix='tmp', dir= tmp_dir)
+# parser = MyHTMLParser()
+# tmp_dir = sys.path[0] + '/tmp'
+# pic_file = tempfile.NamedTemporaryFile(prefix='tmp', dir= tmp_dir)
 
-img_urls = [] #list of images in subreddit
-source_url = "http://imgur.com/r/" + subreddit + "/"
-response = urllib2.urlopen(source_url)
-html = response.read()
-parser.feed(html) # fills in image_url list
+# img_urls = [] #list of images in subreddit
+# source_url = "http://imgur.com/r/" + subreddit + "/"
+# response = urllib2.urlopen(source_url)
+# html = response.read()
+# parser.feed(html) # fills in image_url list
 
 # Attempt to send randomly 20 times at most
 for _ in range(1,20):
 	# Randomly select image from list
-	image_url = random.choice(img_urls)
+	# image_url = random.choice(img_urls)
 
 	# Download the image at url
-	print 'downloading image : ' + image_url
-	resource = urllib2.urlopen(image_url)
-	pic_file.write(resource.read())
-	pic_file.flush()
+	# print 'downloading image : ' + image_url
+	# resource = urllib2.urlopen(image_url)
+	# pic_file.write(resource.read())
+	# pic_file.flush()
 
 	# Compare file to imgur's default missing image
-	if filecmp.cmp(sys.path[0] + '/invalid.png', pic_file.name) == True:
-		print 'invalid image rolling again'
-		continue
+	# if filecmp.cmp(sys.path[0] + '/invalid.png', pic_file.name) == True:
+	# 	print 'invalid image rolling again'
+	# 	continue
 
 	# 2: Send image
 	if randomize_from:
 		sender = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(5)) + '@gmail.com'
 	else:
 		sender = subreddit + '_mailer@gmail.com'
-	if SendMail(number, sender, 'Daily Digest', '', pic_file.name):
+	# if SendMail(number, sender, subject, text, pic_file.name):
+	if SendMail(number, sender, subject, text, None):
 		print 'sent succesfully to ' + number
+		# time.sleep	(400)
 		break #break if sucessful
 	continue
-#os.remove(cwd + '/pic.png')
